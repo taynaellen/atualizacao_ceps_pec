@@ -195,8 +195,10 @@ def alterar_cep(page, cpf, cep):
     cep_atual_numeros = somente_numeros(cep_anterior)
 
     if cep_atual_numeros == cep:
-        print("✓ CEP já está correto.")
-        print("O cadastro será salvo normalmente.")
+        print("✓ CEP já estava correto.")
+        print("Não será necessário salvar.")
+
+        return cep_anterior, cep_anterior, True
 
     else:
         print(
@@ -299,7 +301,25 @@ def alterar_cep(page, cpf, cep):
             "Marcando NÃO..."
         )
 
-        situacao_nao.check(force=True)
+        # situacao_nao.check(force=True)
+        try:
+            situacao_nao.focus()
+            situacao_nao.press("Space")
+            page.wait_for_timeout(300)
+
+            if not situacao_nao.is_checked():
+                situacao_nao.check(force=True)
+
+        except Exception:
+            situacao_nao.focus()
+            situacao_nao.press("Space")
+
+        page.wait_for_timeout(500)
+
+        if not situacao_nao.is_checked():
+            raise Exception(
+                "Não foi possível marcar 'Não' no campo situação de rua."
+            )
 
         page.wait_for_timeout(500)
 
@@ -394,7 +414,7 @@ def alterar_cep(page, cpf, cep):
     print("✓ Cadastro salvo.")
     print("URL:", page.url)
 
-    return cep_anterior, cep_depois
+    return cep_anterior, cep_depois, False
 
 
 # ======================================================
@@ -472,19 +492,28 @@ with sync_playwright() as p:
                 cep_original
             )
 
-            cep_anterior, cep_gravado = alterar_cep(
+            cep_anterior, cep_gravado, cep_ja_estava_correto = alterar_cep(
                 page,
                 cpf,
                 cep
             )
 
-            registrar_resultado(
-                cpf,
-                cep,
-                "OK",
-                f"CEP anterior: {cep_anterior}; "
-                f"novo: {cep_gravado}"
-            )
+            if cep_ja_estava_correto:
+                registrar_resultado(
+                    cpf,
+                    cep,
+                    "CEP JÁ ESTAVA CORRETO",
+                    f"CEP atual: {cep_anterior}"
+                )
+
+            else:
+                registrar_resultado(
+                    cpf,
+                    cep,
+                    "OK",
+                    f"CEP anterior: {cep_anterior}; "
+                    f"novo: {cep_gravado}"
+                )
 
         except Exception as erro:
 
